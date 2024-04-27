@@ -1,0 +1,39 @@
+stages:
+    - version
+    - build
+    - deploy 
+
+before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY    
+
+version:
+    stage: version
+    tags:
+        - docker-runner
+    image: python:3.9
+    before_script:
+        - ""    
+    script:
+        - pip install requests
+        - python version.py
+
+build:
+    stage: build
+    tags:
+        - docker-runner
+    script:
+        - docker build -t $CI_REGISTRY/$CI_PROJECT_PATH/frontend:$VERSION -t $CI_REGISTRY/$CI_PROJECT_PATH/frontend:latest -f next.dockerfile .
+
+        - docker push $CI_REGISTRY/$CI_PROJECT_PATH/frontend:$VERSION
+        - docker push $CI_REGISTRY/$CI_PROJECT_PATH/frontend:latest
+
+deploy:
+    stage: deploy
+    tags:
+        - docker-runner
+    script:
+        - git clone "https://ramezkanjmonty:${GIT_KEY}@gitlab.com/helloworld9253207/fullstack-gitops.git"
+        - cd fullstack-gitops
+        - docker stack deploy -c compose.yml fullstack
+    dependencies:
+        - build   
